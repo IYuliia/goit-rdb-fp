@@ -1,0 +1,79 @@
+﻿1.1. CREATE SCHEMA pandemic;
+
+
+1.2. USE pandemic;
+
+
+2.1. CREATE TABLE Entity (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    Entity VARCHAR(255),
+    Code VARCHAR(255)
+);
+
+
+2.2. INSERT INTO Entity (Entity, Code)
+SELECT DISTINCT Entity, Code FROM infectious_cases;
+
+
+2.4. ​​ALTER TABLE infectious_cases
+ADD COLUMN EntityId INT FIRST,
+ADD FOREIGN KEY (EntityId) REFERENCES Entity(id);
+
+
+2.5.UPDATE infectious_cases AS ic
+SET ic.EntityId = (
+    SELECT e.id
+    FROM Entity AS e
+    WHERE ic.Entity = e.Entity AND ic.Code = e.Code
+);
+
+
+2.6. ALTER TABLE infectious_cases
+DROP COLUMN Entity,
+DROP COLUMN Code;
+
+
+3. SELECT ic.EntityId,
+    AVG(ic.Number_rabies) AS avg_number_rabies,
+    MIN(ic.Number_rabies) AS min_number_rabies,
+    MAX(ic.Number_rabies) AS max_number_rabies,
+    SUM(ic.Number_rabies) AS sum_number_rabies
+FROM infectious_cases ic
+WHERE ic.Number_rabies != ''
+GROUP BY ic.EntityId
+ORDER BY avg_number_rabies DESC
+LIMIT 10;
+
+
+4. SELECT Year,
+CONCAT(Year, '-01-01') AS start_of_year,
+CURDATE() AS current_d,
+TIMESTAMPDIFF(YEAR, STR_TO_DATE(CONCAT(Year, '-01-01'), '%Y-%m-%d'), CURDATE()) AS years_difference
+FROM infectious_cases;
+
+
+
+
+
+
+5. DROP FUNCTION IF EXISTS CalculateYearDifference;
+
+
+DELIMITER //
+CREATE FUNCTION CalculateYearDifference (year_val INT)
+RETURNS INT 
+DETERMINISTIC
+BEGIN
+DECLARE start_of_year DATE;
+DECLARE current_d DATE;
+DECLARE years_difference INT;
+SET start_of_year = CONCAT(year_val, '-01-01');
+SET current_d = CURDATE();
+SET years_difference = TIMESTAMPDIFF(YEAR, STR_TO_DATE(start_of_year, '%Y-%m-%d'), current_d);
+RETURN years_difference;
+END //
+DELIMITER ;
+
+
+SELECT CalculateYearDifference(1980);
+SELECT CalculateYearDifference(1992);
